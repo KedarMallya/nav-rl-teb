@@ -106,7 +106,7 @@ python3 tests/check_rl_plumbing.py 4
 
 - **Minimal_TEB** by whsleep. `ros_nav/TebSolver.py` is based on this CasADi and IPOPT implementation of the TEB optimiser, with local changes (empty obstacle lists handled, IPOPT output silenced, solver statistics kept). Used under the MIT licence, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). https://github.com/whsleep/Minimal_TEB
 - **Stable-Baselines3** provides the PPO implementation used for training. https://github.com/DLR-RM/stable-baselines3
-- **AutoNavRL** is a reinforcement learning navigation project listed among the projects built on the IR-SIM simulator. It was used as a reference for how to set up RL-based navigation. https://github.com/<TODO: add the AutoNavRL repository URL>
+- **AutoNavRL** is a reinforcement learning navigation project listed among the projects built on the IR-SIM simulator. It was used as a reference for how to set up RL-based navigation. https://github.com/harshmahesheka/AutoNavRL
 - **IR-SIM** (Intelligent Robot Simulator), the lightweight 2D simulator that AutoNavRL builds on. https://github.com/hanruihua/ir-sim
 - **MuJoCo**, **Gymnasium**, **CasADi**, **IPOPT** and **ROS 2** are used as libraries (see below).
 
