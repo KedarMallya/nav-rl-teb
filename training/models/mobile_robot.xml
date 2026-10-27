@@ -1,0 +1,109 @@
+<mujoco model="minimal_diff_drive_nav">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+  <size njmax="2000" nconmax="500"/>
+  <default>
+    <joint damping="0.15" armature="0.002"/>
+    <geom friction="1.2 0.02 0.002" condim="3" solref="0.01 1"/>
+    <motor ctrllimited="true" ctrlrange="-10 10"/>
+  </default>
+  <worldbody>
+    <light pos="0 0 5" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+    <geom name="floor" type="plane" pos="0 0 0" size="3.2 3.2 0.1" rgba="0.92 0.92 0.92 1"/>
+    <!-- Goal marker: a SITE (ignored by collisions and by rangefinder rays); moved by Python on reset -->
+    <site name="goal_marker" type="cylinder" pos="0 0 0.01" size="0.25 0.005" rgba="0.1 0.8 0.2 0.6"/>
+    <!-- 6 m x 6 m room, centered at the origin -->
+    <geom name="wall_n" type="box" pos="0 3.05 0.25" size="3.05 0.05 0.25" rgba="0.25 0.25 0.28 1"/>
+    <geom name="wall_s" type="box" pos="0 -3.05 0.25" size="3.05 0.05 0.25" rgba="0.25 0.25 0.28 1"/>
+    <geom name="wall_e" type="box" pos="3.05 0 0.25" size="0.05 3 0.25" rgba="0.25 0.25 0.28 1"/>
+    <geom name="wall_w" type="box" pos="-3.05 0 0.25" size="0.05 3 0.25" rgba="0.25 0.25 0.28 1"/>
+    <!-- Movable obstacle slots. They are MOCAP bodies: MuJoCo precomputes collision bounds for static world geoms, so editing geom_pos at runtime would move the geom for rays/rendering but NOT for collisions. Python moves them via data.mocap_pos. -->
+    <body name="obstacle_0_body" mocap="true" pos="-1.5 -1.5 0.15">
+      <geom name="obstacle_0" type="box" pos="0 0 0" size="0.22 0.22 0.15" rgba="0.7 0.35 0.2 1"/>
+    </body>
+    <body name="obstacle_1_body" mocap="true" pos="-0.5 -1.5 0.15">
+      <geom name="obstacle_1" type="box" pos="0 0 0" size="0.22 0.22 0.15" rgba="0.7 0.35 0.2 1"/>
+    </body>
+    <body name="obstacle_2_body" mocap="true" pos="0.5 -1.5 0.15">
+      <geom name="obstacle_2" type="box" pos="0 0 0" size="0.22 0.22 0.15" rgba="0.7 0.35 0.2 1"/>
+    </body>
+    <body name="obstacle_3_body" mocap="true" pos="1.5 -1.5 0.15">
+      <geom name="obstacle_3" type="box" pos="0 0 0" size="0.22 0.22 0.15" rgba="0.7 0.35 0.2 1"/>
+    </body>
+    <body name="obstacle_4_body" mocap="true" pos="2.0 -1.5 0.15">
+      <geom name="obstacle_4" type="box" pos="0 0 0" size="0.22 0.22 0.15" rgba="0.7 0.35 0.2 1"/>
+    </body>
+
+    <body name="base" pos="0 0 0.12">
+      <freejoint name="base_free"/>
+      <geom name="chassis" type="cylinder" size="0.16 0.055" mass="1.2" rgba="0.15 0.35 0.8 1"/>
+      <!-- Frictionless casters (front/back) keep the two-wheel base level; wheel bottoms are at z=-0.095 in base frame -->
+      <geom name="caster_front" type="sphere" size="0.02" pos="0.12 0 -0.075" mass="0.02" friction="0 0 0" condim="1" priority="1" rgba="0.3 0.3 0.3 1"/>
+      <geom name="caster_back" type="sphere" size="0.02" pos="-0.12 0 -0.075" mass="0.02" friction="0 0 0" condim="1" priority="1" rgba="0.3 0.3 0.3 1"/>
+      <site name="base_site" pos="0 0 0.04" size="0.01"/>
+      <body name="left_wheel" pos="0 0.13 -0.045">
+        <joint name="left_wheel_hinge" type="hinge" axis="0 1 0" damping="0.02"/>
+        <geom name="left_wheel_geom" type="cylinder" size="0.05 0.018" quat="0.70710678 0.70710678 0 0" mass="0.12" rgba="0.08 0.08 0.08 1"/>
+      </body>
+      <body name="right_wheel" pos="0 -0.13 -0.045">
+        <joint name="right_wheel_hinge" type="hinge" axis="0 1 0" damping="0.02"/>
+        <geom name="right_wheel_geom" type="cylinder" size="0.05 0.018" quat="0.70710678 0.70710678 0 0" mass="0.12" rgba="0.08 0.08 0.08 1"/>
+      </body>
+      <!-- Ray sites point horizontally; one rangefinder per beam -->
+    <site name="lidar_site_00" pos="0 0 0.16" quat="0.70710678 -0.00000000 0.70710678 0.00000000" size="0.006"/>
+    <site name="lidar_site_01" pos="0 0 0.16" quat="0.70105738 -0.09229596 0.70105738 0.09229596" size="0.006"/>
+    <site name="lidar_site_02" pos="0 0 0.16" quat="0.68301270 -0.18301270 0.68301270 0.18301270" size="0.006"/>
+    <site name="lidar_site_03" pos="0 0 0.16" quat="0.65328148 -0.27059805 0.65328148 0.27059805" size="0.006"/>
+    <site name="lidar_site_04" pos="0 0 0.16" quat="0.61237244 -0.35355339 0.61237244 0.35355339" size="0.006"/>
+    <site name="lidar_site_05" pos="0 0 0.16" quat="0.56098553 -0.43045933 0.56098553 0.43045933" size="0.006"/>
+    <site name="lidar_site_06" pos="0 0 0.16" quat="0.50000000 -0.50000000 0.50000000 0.50000000" size="0.006"/>
+    <site name="lidar_site_07" pos="0 0 0.16" quat="0.43045933 -0.56098553 0.43045933 0.56098553" size="0.006"/>
+    <site name="lidar_site_08" pos="0 0 0.16" quat="0.35355339 -0.61237244 0.35355339 0.61237244" size="0.006"/>
+    <site name="lidar_site_09" pos="0 0 0.16" quat="0.27059805 -0.65328148 0.27059805 0.65328148" size="0.006"/>
+    <site name="lidar_site_10" pos="0 0 0.16" quat="0.18301270 -0.68301270 0.18301270 0.68301270" size="0.006"/>
+    <site name="lidar_site_11" pos="0 0 0.16" quat="0.09229596 -0.70105738 0.09229596 0.70105738" size="0.006"/>
+    <site name="lidar_site_12" pos="0 0 0.16" quat="0.00000000 -0.70710678 0.00000000 0.70710678" size="0.006"/>
+    <site name="lidar_site_13" pos="0 0 0.16" quat="-0.09229596 -0.70105738 -0.09229596 0.70105738" size="0.006"/>
+    <site name="lidar_site_14" pos="0 0 0.16" quat="-0.18301270 -0.68301270 -0.18301270 0.68301270" size="0.006"/>
+    <site name="lidar_site_15" pos="0 0 0.16" quat="-0.27059805 -0.65328148 -0.27059805 0.65328148" size="0.006"/>
+    <site name="lidar_site_16" pos="0 0 0.16" quat="-0.35355339 -0.61237244 -0.35355339 0.61237244" size="0.006"/>
+    <site name="lidar_site_17" pos="0 0 0.16" quat="-0.43045933 -0.56098553 -0.43045933 0.56098553" size="0.006"/>
+    <site name="lidar_site_18" pos="0 0 0.16" quat="-0.50000000 -0.50000000 -0.50000000 0.50000000" size="0.006"/>
+    <site name="lidar_site_19" pos="0 0 0.16" quat="-0.56098553 -0.43045933 -0.56098553 0.43045933" size="0.006"/>
+    <site name="lidar_site_20" pos="0 0 0.16" quat="-0.61237244 -0.35355339 -0.61237244 0.35355339" size="0.006"/>
+    <site name="lidar_site_21" pos="0 0 0.16" quat="-0.65328148 -0.27059805 -0.65328148 0.27059805" size="0.006"/>
+    <site name="lidar_site_22" pos="0 0 0.16" quat="-0.68301270 -0.18301270 -0.68301270 0.18301270" size="0.006"/>
+    <site name="lidar_site_23" pos="0 0 0.16" quat="-0.70105738 -0.09229596 -0.70105738 0.09229596" size="0.006"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <velocity name="left_wheel_velocity" joint="left_wheel_hinge" kv="5" ctrlrange="-10 10"/>
+    <velocity name="right_wheel_velocity" joint="right_wheel_hinge" kv="5" ctrlrange="-10 10"/>
+  </actuator>
+  <sensor>
+    <rangefinder name="lidar_00" site="lidar_site_00" cutoff="3.5"/>
+    <rangefinder name="lidar_01" site="lidar_site_01" cutoff="3.5"/>
+    <rangefinder name="lidar_02" site="lidar_site_02" cutoff="3.5"/>
+    <rangefinder name="lidar_03" site="lidar_site_03" cutoff="3.5"/>
+    <rangefinder name="lidar_04" site="lidar_site_04" cutoff="3.5"/>
+    <rangefinder name="lidar_05" site="lidar_site_05" cutoff="3.5"/>
+    <rangefinder name="lidar_06" site="lidar_site_06" cutoff="3.5"/>
+    <rangefinder name="lidar_07" site="lidar_site_07" cutoff="3.5"/>
+    <rangefinder name="lidar_08" site="lidar_site_08" cutoff="3.5"/>
+    <rangefinder name="lidar_09" site="lidar_site_09" cutoff="3.5"/>
+    <rangefinder name="lidar_10" site="lidar_site_10" cutoff="3.5"/>
+    <rangefinder name="lidar_11" site="lidar_site_11" cutoff="3.5"/>
+    <rangefinder name="lidar_12" site="lidar_site_12" cutoff="3.5"/>
+    <rangefinder name="lidar_13" site="lidar_site_13" cutoff="3.5"/>
+    <rangefinder name="lidar_14" site="lidar_site_14" cutoff="3.5"/>
+    <rangefinder name="lidar_15" site="lidar_site_15" cutoff="3.5"/>
+    <rangefinder name="lidar_16" site="lidar_site_16" cutoff="3.5"/>
+    <rangefinder name="lidar_17" site="lidar_site_17" cutoff="3.5"/>
+    <rangefinder name="lidar_18" site="lidar_site_18" cutoff="3.5"/>
+    <rangefinder name="lidar_19" site="lidar_site_19" cutoff="3.5"/>
+    <rangefinder name="lidar_20" site="lidar_site_20" cutoff="3.5"/>
+    <rangefinder name="lidar_21" site="lidar_site_21" cutoff="3.5"/>
+    <rangefinder name="lidar_22" site="lidar_site_22" cutoff="3.5"/>
+    <rangefinder name="lidar_23" site="lidar_site_23" cutoff="3.5"/>
+  </sensor>
+</mujoco>
