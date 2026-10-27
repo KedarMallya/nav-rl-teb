@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Anin. MIT License. See THIRD_PARTY_NOTICES.md.
+# Source: https://github.com/whsleep/Minimal_TEB
 # Based on whsleep/Minimal_TEB TebSolver.py. Local changes (marked in git-less form):
 #  - None/empty obstacles handled (_as_obstacle_array), obstacle rows are (m,7)
 #  - IPOPT banner/timing output silenced (solver is called at ~10 Hz)
