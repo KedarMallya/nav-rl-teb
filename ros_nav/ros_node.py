@@ -23,6 +23,8 @@ Parameters (--ros-args -p name:=value):
   show_truth:=false             debug only: draw the true random obstacles in RViz (magenta).
                                 Default off: RViz gets the static map, the robot must sense the rest
   lidar_range:=4.0  scan_rate:=10.0
+  local_planner:=teb|rl  rl_model:=/path/final.zip  rl_lookahead:=1.5  rl_range_offset:=0.0
+                                RL = PPO policy (rl_controller.py) instead of TEB; needs stable-baselines3
   sensed_pad:=0.08 sensed_shift:=0.15 sensed_clearance:=0.30   room left around random obstacles
                                 [m]; raise them if the robot clips obstacles, lower to squeeze closer
   start_x:=0.0 start_y:=0.0 start_yaw:=0.0   (use decimals)
@@ -87,6 +89,10 @@ class TebNode(Node):
         # how much room the planners leave around SENSED (random) obstacles
         self.declare_parameter("sensed_pad", 0.08)        # tracker: extra radius on each circle [m]
         self.declare_parameter("sensed_shift", 0.15)      # tracker: centre pushed behind the seen face [m]
+        self.declare_parameter("local_planner", "teb")    # "teb" or "rl"
+        self.declare_parameter("rl_model", "")            # PPO .zip; empty -> obstacle-blind fallback
+        self.declare_parameter("rl_lookahead", 1.5)       # carrot distance along the global path [m]
+        self.declare_parameter("rl_range_offset", 0.0)    # make obstacles look this much closer [m]
         self.declare_parameter("sensed_clearance", 0.30)  # TEB: wanted distance robot-centre <-> circle edge [m]
 
         self.frame = self.get_parameter("frame").value
@@ -143,16 +149,32 @@ class TebNode(Node):
         self._last_sensed = 0
         # global A* on the map (+ lidar-discovered obstacles) feeds TEB its local goals
         self.global_planner = GlobalPlanner(self.gridmap)
-        self.controller = TebController(self.obstacles, global_planner=self.global_planner)
-        # TEB adds its own safe_distance (default 0.5 m) to every obstacle radius. For sensed
-        # circles we shift the radius so the soft wall sits at `sensed_clearance` instead.
-        self.sensed_offset = (float(self.get_parameter("sensed_clearance").value)
-                              - self.controller.solver_kwargs["safe_distance"])
+        if self.get_parameter("local_planner").value == "rl":
+            from rl_controller import Policy
+            from rl_local_controller import RLController
+            policy = Policy(self.get_parameter("rl_model").value or None)
+            if policy.model is None:
+                self.get_logger().warn("local_planner=rl but no rl_model given: using the "
+                                       "obstacle-blind goal-seeking fallback!")
+            self.controller = RLController(
+                self.global_planner, policy,
+                lookahead=float(self.get_parameter("rl_lookahead").value),
+                range_offset=float(self.get_parameter("rl_range_offset").value),
+                control_dt=self.plan_period)
+            self.sensed_offset = 0.0
+        else:
+            self.controller = TebController(self.obstacles, global_planner=self.global_planner)
+            # TEB adds its own safe_distance (default 0.5 m) to every obstacle radius. For sensed
+            # circles we shift the radius so the soft wall sits at `sensed_clearance` instead.
+            self.sensed_offset = (float(self.get_parameter("sensed_clearance").value)
+                                  - self.controller.solver_kwargs["safe_distance"])
         self._last_gpath_version = -1
         self.grid_msg = self.build_grid_msg()
 
         self.lock = threading.Lock()
         self.pose = self.sim.pose
+        self.vel = (0.0, 0.0)       # measured (v, w), for the RL observation
+        self.scan = None            # latest (ranges, angle_min, angle_inc, range_min)
         self.cmd = (0.0, 0.0)
         self.running = True
 
@@ -214,12 +236,16 @@ class TebNode(Node):
         self.sim.set_cmd(v, w)
         self.sim.step(self.sim_dt)
         pose = self.sim.pose
+        vel = self.sim.velocity
         with self.lock:
-            self.pose = pose
+            self.pose, self.vel = pose, vel
         self.publish_state(pose, v, w)
         self._tick += 1
         if self._tick % self.scan_every == 0:  # runs in the thread that steps MuJoCo
             ranges = self.lidar.scan(pose)
+            with self.lock:
+                self.scan = (ranges, float(self.lidar.angles[0]),
+                             float(2 * math.pi / self.lidar.n), 0.05)
             self.tracker.update(pose, ranges, self.lidar.angles)
             self.publish_scan(ranges)
 
@@ -340,11 +366,11 @@ class TebNode(Node):
         while self.running:
             t0 = time.perf_counter()
             with self.lock:
-                pose = self.pose.copy()
+                pose, vel, scan = self.pose.copy(), self.vel, self.scan
             sensed = self.tracker.as_solver_rows(self.sensed_offset)
             self.controller.obstacles = np.vstack([self.obstacles, sensed]) if len(sensed) else self.obstacles
             self.controller.dynamic_circles = np.array(self.tracker.snapshot(), float).reshape(-1, 3)
-            v, w, path = self.controller.update(pose, self.plan_period)
+            v, w, path = self.controller.update(pose, self.plan_period, scan=scan, vel=vel)
             with self.lock:
                 self.cmd = (v, w)
             if path is not None:

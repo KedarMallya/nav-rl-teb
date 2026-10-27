@@ -81,8 +81,9 @@ class TebController:
             return None if self._goal is None else self._goal.copy()
 
     # ------------------------------------------------------------------
-    def update(self, pose, dt):
-        """pose=[x,y,yaw] in map frame, dt = time since the previous call. Returns (v, w, path)."""
+    def update(self, pose, dt, scan=None, vel=None):
+        """pose=[x,y,yaw] in map frame, dt = time since the previous call. Returns (v, w, path).
+        scan / vel are accepted for interface parity with RLController and ignored here."""
         goal = self.goal
         if goal is None or self.done:
             self._cmd[:] = 0.0

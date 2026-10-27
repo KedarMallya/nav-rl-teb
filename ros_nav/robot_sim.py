@@ -79,9 +79,9 @@ def make_mjcf(start_pose, obstacles, arena=8.0, boxes=None, floor_center=(0.0, 0
             rgba="0.2 0.5 0.9 1"/>
       <geom name="nose" type="box" size="0.04 0.10 0.02" pos="0.17 0 0.09" mass="0.01"
             rgba="1 0.8 0.1 1" contype="0" conaffinity="0"/>
-      <geom name="caster_f" type="sphere" size="0.02" pos="0.17 0 -0.03" mass="0.1"
+      <geom name="caster_f" type="sphere" size="0.02" pos="0.17 0 -0.028" mass="0.1"
             friction="0.02 0.001 0.0001" rgba="0.3 0.3 0.3 1"/>
-      <geom name="caster_r" type="sphere" size="0.02" pos="-0.17 0 -0.03" mass="0.1"
+      <geom name="caster_r" type="sphere" size="0.02" pos="-0.17 0 -0.028" mass="0.1"
             friction="0.02 0.001 0.0001" rgba="0.3 0.3 0.3 1"/>
       <body name="wheel_l" pos="0 {half} 0">
         <joint name="wl" type="hinge" axis="0 1 0" damping="0.001" armature="0.005"/>
