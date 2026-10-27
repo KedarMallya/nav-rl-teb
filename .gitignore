@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+*Zone.Identifier*
+runs/
+*.zip
+!ros_nav/final.zip
